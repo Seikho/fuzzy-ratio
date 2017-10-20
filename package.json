@@ -1,0 +1,17 @@
+{
+  "name": "fuzzy-ratio",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "typings": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "Carl Winkler",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^2.5.3"
+  }
+}
