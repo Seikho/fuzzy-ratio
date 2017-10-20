@@ -1,6 +1,5 @@
 # Fuzzy Ratio
 Dealing with off-by-N problems when dealing with aspect ratios.  
-Written in TypeScript
 
 ## Installation
 
