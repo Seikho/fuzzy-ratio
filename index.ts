@@ -167,22 +167,3 @@ function round(value: number) {
   const multiplier = Math.pow(10, 2)
   return Math.round(value * multiplier) / multiplier
 }
-
-const fixtures = [[5516, 3677], [3619, 2715], [5451, 3091], [796, 1134]]
-
-//   [650, 366], [316, 237], [317, 237], [149, 86], [1987, 1119]
-
-for (const [width, height] of fixtures) {
-  console.log('\n')
-  console.log('------------------------')
-  console.log(`Original: ${width}w, ${height}h`)
-  console.log(
-    'Range: 2',
-    JSON.stringify(fuzzRatio({ width, height, type: 'range', tolerance: 2 }).fuzzed, null, 2)
-  )
-  console.log(
-    'Percent: 1',
-    JSON.stringify(fuzzRatio({ width, height, type: 'percent', tolerance: 3 }).fuzzed, null, 2)
-  )
-  console.log('------------------------')
-}
