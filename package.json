@@ -16,5 +16,10 @@
   },
   "engines": {
     "node": "<=4.0.0"
-  }
+  },
+  "files": [
+    "index.*",
+    "yarn.lock",
+    "readme.md"
+  ]
 }
