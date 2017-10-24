@@ -1,15 +1,23 @@
-type ErrorResult = {
+export interface RatioError {
   diff: number
   percent: number
   mod: number
 }
 
-type Fuzzed = Ratio & { original: Ratio; error: { width: ErrorResult; height: ErrorResult } }
+export type FuzzRatio = Ratio & {
+  original: Ratio
+  error: { width: RatioError; height: RatioError }
+}
 
 export type Result = {
+  /** The real, un-fuzzed aspect ratio */
   ratio: Ratio
-  fuzzed?: Fuzzed
-  alts?: Fuzzed[]
+
+  /** The 'best' fuzzed aspect ratio candidate */
+  fuzzed?: FuzzRatio
+
+  /** The unused fuzzed ratio candidates also used during the process */
+  alts?: FuzzRatio[]
 }
 
 export type Ratio = {
@@ -22,10 +30,12 @@ export type Options = Ratio & Fuzz
 export type Fuzz = {
   type: 'percent' | 'range'
   tolerance: number
+
+  /** If provided, will exclude all fuzzed ratios that do not match the list provided */
   allowedRatios?: Ratio[]
 }
 
-type ErrorRatio = {
+interface ErrorRatio {
   range: number
   percent: number
   ratio: number
@@ -123,7 +133,7 @@ export default function fuzzRatio(options: Options): Result {
   }
   const fuzzedRatio = fuzzed.error ? toFuzzed(fuzzed, fuzzed.error) : undefined
 
-  const alts = new Map<string, Fuzzed>()
+  const alts = new Map<string, FuzzRatio>()
   for (const ratio of sorted.slice(1)) {
     const error = ratio.error
     if (!error) {
@@ -155,7 +165,7 @@ export default function fuzzRatio(options: Options): Result {
 function toFuzzed(
   ratio: { width: number; height: number },
   error: { width: ErrorRatio; height: ErrorRatio }
-): Fuzzed {
+): FuzzRatio {
   return {
     width: error.width.ratio,
     height: error.height.ratio,
