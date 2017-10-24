@@ -1,11 +1,15 @@
 type ErrorResult = {
   diff: number
   percent: number
+  mod: number
 }
+
+type Fuzzed = Ratio & { original: Ratio; error: { width: ErrorResult; height: ErrorResult } }
 
 export type Result = {
   ratio: Ratio
-  fuzzed?: Ratio & { original: Ratio; error: { width: ErrorResult; height: ErrorResult } }
+  fuzzed?: Fuzzed
+  alts?: Fuzzed[]
 }
 
 export type Ratio = {
@@ -25,6 +29,7 @@ type ErrorRatio = {
   range: number
   percent: number
   ratio: number
+  mod: number
 }
 
 export default function fuzzRatio(options: Options): Result {
@@ -106,57 +111,96 @@ export default function fuzzRatio(options: Options): Result {
     return leftSum > rightSum ? 1 : leftSum === rightSum ? 0 : -1
   })
 
-  const fuzzed = sorted[0]
-  const fuzzedRatio = fuzzed.error
-    ? {
-        width: fuzzed.error.width.ratio,
-        height: fuzzed.error.height.ratio,
-        error: {
-          width: { diff: fuzzed.error.width.range, percent: fuzzed.error.width.percent },
-          height: { diff: fuzzed.error.height.range, percent: fuzzed.error.height.percent }
-        },
-        original: {
-          width: fuzzed.width,
-          height: fuzzed.height
-        }
-      }
-    : undefined
-
   const unfuzzedDiv = getGcd(options.width, options.height)
   const ratio = {
     width: options.width / unfuzzedDiv,
     height: options.height / unfuzzedDiv
   }
 
+  const fuzzed = sorted[0]
+  if (!fuzzed) {
+    return { ratio }
+  }
+  const fuzzedRatio = fuzzed.error ? toFuzzed(fuzzed, fuzzed.error) : undefined
+
+  const alts = new Map<string, Fuzzed>()
+  for (const ratio of sorted.slice(1)) {
+    const error = ratio.error
+    if (!error) {
+      continue
+    }
+
+    const fuzzed = toFuzzed(ratio, error)
+    const id = `${fuzzed.width}:${fuzzed.height}`
+    const existing = alts.get(id)
+    if (!existing) {
+      alts.set(id, fuzzed)
+      continue
+    }
+
+    const existingDiff = existing.error.width.percent + existing.error.height.percent
+    const newDiff = error.width.percent + error.height.percent
+    if (newDiff < existingDiff) {
+      alts.set(id, fuzzed)
+    }
+  }
+
   return {
     ratio,
-    fuzzed: fuzzedRatio
+    fuzzed: fuzzedRatio,
+    alts: Array.from(alts).map(alt => alt[1])
+  }
+}
+
+function toFuzzed(
+  ratio: { width: number; height: number },
+  error: { width: ErrorRatio; height: ErrorRatio }
+): Fuzzed {
+  return {
+    width: error.width.ratio,
+    height: error.height.ratio,
+    error: {
+      width: {
+        diff: error.width.range,
+        percent: error.width.percent,
+        mod: error.width.mod,
+        ratio: error.width.ratio
+      },
+      height: {
+        diff: error.height.range,
+        percent: error.height.percent,
+        mod: error.height.mod,
+        ratio: error.height.ratio
+      }
+    },
+    original: {
+      width: ratio.width,
+      height: ratio.height
+    }
   }
 }
 
 function getError(value: number, divisor: number): ErrorRatio {
   const original = value * divisor
-  const modified = Math.floor(value) * divisor
-  const newRatio = modified / divisor
+  const mod = Math.floor(value) * divisor
+  const ratio = mod / divisor
 
-  const closest =
-    Math.abs(modified - original) > Math.abs(modified - newRatio - original)
-      ? modified - newRatio
-      : modified
+  const closest = Math.abs(mod - original) > Math.abs(mod - ratio - original) ? mod - ratio : mod
 
   const range = Math.abs(original - closest)
   const percent = round(range / original * 100)
 
-  return { range, percent, ratio: newRatio }
+  return { range, percent, ratio, mod }
 }
 
-function getDivisors(left: number, right: number, divs: number[] = []): number[] {
-  const div = left % right
-  if (div !== 0) {
-    divs.push(div)
+function getDivisors(left: number, right: number): number[] {
+  const value = left < right ? left : right
+  const half = Math.floor(value / 2)
+  const divs: number[] = []
+  for (let i = 2; i <= half; i++) {
+    divs.push(i)
   }
-
-  return div === 0 ? divs : getDivisors(right, div, divs)
+  return divs
 }
 
 function getGcd(left: number, right: number): number {
